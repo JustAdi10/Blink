@@ -1,0 +1,37 @@
+name: blink
+description: A cross-platform Flutter application that mimics AirDrop-like file sharing.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # File handling
+  file_picker: ^8.0.0+1
+  path_provider: ^2.1.2
+  open_filex: ^4.3.2
+  
+  # Nearby connections (commented out due to Android build issues)
+  # flutter_nearby_connections: ^1.1.2
+  
+  # UI
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # To add assets to your application, add an assets section, like this:
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
