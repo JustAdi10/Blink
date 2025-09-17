@@ -6,11 +6,15 @@ import '../services/device_service.dart';
 import '../services/transfer_service.dart';
 import '../services/mock_device_service.dart';
 import '../services/mock_transfer_service.dart';
+import '../services/real_device_service.dart';
+import '../services/real_transfer_service.dart';
 import '../models/device_info.dart';
 import '../models/transfer_info.dart';
 import '../widgets/device_tile.dart';
 import '../widgets/progress_bar.dart';
 import 'transfer_progress_screen.dart';
+import 'permission_screen.dart';
+import 'device_naming_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,11 +28,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final TransferService _transferService = TransferService();
   final MockDeviceService _mockDeviceService = MockDeviceService();
   final MockTransferService _mockTransferService = MockTransferService();
+  final RealDeviceService _realDeviceService = RealDeviceService();
+  final RealTransferService _realTransferService = RealTransferService();
   
   List<DeviceInfo> _devices = [];
   List<TransferInfo> _activeTransfers = [];
   bool _isInitialized = false;
   bool _isLoading = false;
+  bool _permissionsGranted = false;
+  bool _deviceNamed = false;
 
   StreamSubscription<List<DeviceInfo>>? _devicesSubscription;
   StreamSubscription<TransferInfo>? _transferSubscription;
@@ -47,22 +55,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       // Try to initialize real services first
-      await _deviceService.initialize();
-      _transferService.initialize();
+      print('Attempting to initialize real peer-to-peer services...');
+      await _realDeviceService.initialize();
+      _realTransferService.initialize();
       
-      _devicesSubscription = _deviceService.devicesStream.listen((devices) {
+      _devicesSubscription = _realDeviceService.devicesStream.listen((devices) {
         setState(() {
           _devices = devices;
         });
       });
 
-      _transferSubscription = _transferService.transferStream.listen((transfer) {
+      _transferSubscription = _realTransferService.transferStream.listen((transfer) {
         setState(() {
-          _activeTransfers = _transferService.getActiveTransfers();
+          _activeTransfers = _realTransferService.getActiveTransfers();
         });
       });
 
-      _completedTransferSubscription = _transferService.completedTransferStream.listen((transfer) {
+      _completedTransferSubscription = _realTransferService.completedTransferStream.listen((transfer) {
         _showTransferCompletedSnackBar(transfer);
       });
 
@@ -97,16 +106,23 @@ class _HomeScreenState extends State<HomeScreen> {
         _isInitialized = true;
         _isLoading = false;
       });
+    } catch (e) {
+      print('Error initializing services: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Failed to initialize: $e');
     }
   }
 
   Future<void> _connectToDevice(DeviceInfo device) async {
     bool success;
-    if (_isInitialized && _devices.isNotEmpty) {
-      // Use mock service if we have mock devices
+    try {
+      // Try real service first
+      success = await _realDeviceService.connectToDevice(device);
+    } catch (e) {
+      print('Real service failed, using mock: $e');
       success = await _mockDeviceService.connectToDevice(device);
-    } else {
-      success = await _deviceService.connectToDevice(device);
     }
     
     if (!success) {
@@ -116,11 +132,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _disconnectFromDevice(DeviceInfo device) async {
     bool success;
-    if (_isInitialized && _devices.isNotEmpty) {
-      // Use mock service if we have mock devices
+    try {
+      // Try real service first
+      success = await _realDeviceService.disconnectFromDevice(device);
+    } catch (e) {
+      print('Real service failed, using mock: $e');
       success = await _mockDeviceService.disconnectFromDevice(device);
-    } else {
-      success = await _deviceService.disconnectFromDevice(device);
     }
     
     if (!success) {
@@ -139,11 +156,12 @@ class _HomeScreenState extends State<HomeScreen> {
         final file = result.files.first;
         if (file.path != null) {
           TransferInfo? transfer;
-          if (_isInitialized && _devices.isNotEmpty) {
-            // Use mock service if we have mock devices
+          try {
+            // Try real service first
+            transfer = await _realTransferService.sendFile(file.path!, device);
+          } catch (e) {
+            print('Real transfer service failed, using mock: $e');
             transfer = await _mockTransferService.sendFile(file.path!, device);
-          } else {
-            transfer = await _transferService.sendFile(file.path!, device);
           }
           
           if (transfer != null) {
@@ -206,6 +224,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show permission screen first if permissions not granted
+    if (!_permissionsGranted) {
+      return PermissionScreen(
+        onPermissionsGranted: () {
+          setState(() {
+            _permissionsGranted = true;
+          });
+        },
+      );
+    }
+
+    // Show device naming screen if device not named
+    if (!_deviceNamed) {
+      return DeviceNamingScreen(
+        onDeviceNamed: () {
+          setState(() {
+            _deviceNamed = true;
+          });
+          _initializeServices();
+        },
+      );
+    }
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 

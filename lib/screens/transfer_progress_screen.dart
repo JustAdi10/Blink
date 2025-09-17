@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/transfer_service.dart';
 import '../services/mock_transfer_service.dart';
+// import '../services/real_transfer_service.dart';
 import '../models/transfer_info.dart';
 import '../widgets/progress_bar.dart';
 
@@ -15,6 +16,7 @@ class TransferProgressScreen extends StatefulWidget {
 class _TransferProgressScreenState extends State<TransferProgressScreen> {
   final TransferService _transferService = TransferService();
   final MockTransferService _mockTransferService = MockTransferService();
+  // final RealTransferService _realTransferService = RealTransferService();
   
   List<TransferInfo> _transfers = [];
   StreamSubscription<TransferInfo>? _transferSubscription;
@@ -27,18 +29,12 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
 
   void _initializeTransfers() {
     setState(() {
-      _transfers = _transferService.getActiveTransfers();
-      if (_transfers.isEmpty) {
-        _transfers = _mockTransferService.getActiveTransfers();
-      }
+      _transfers = _mockTransferService.getActiveTransfers();
     });
 
-    _transferSubscription = _transferService.transferStream.listen((transfer) {
+    _transferSubscription = _mockTransferService.transferStream.listen((transfer) {
       setState(() {
-        _transfers = _transferService.getActiveTransfers();
-        if (_transfers.isEmpty) {
-          _transfers = _mockTransferService.getActiveTransfers();
-        }
+        _transfers = _mockTransferService.getActiveTransfers();
       });
     });
   }

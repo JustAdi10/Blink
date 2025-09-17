@@ -17,8 +17,13 @@ dependencies:
   path_provider: ^2.1.2
   open_filex: ^4.3.2
   
-  # Nearby connections (commented out due to Android build issues)
-  # flutter_nearby_connections: ^1.1.2
+  # Nearby connections
+  nearby_connections: ^4.3.0
+  permission_handler: ^11.4.0
+  device_info_plus: ^10.1.0
+  
+  # Storage
+  shared_preferences: ^2.2.2
   
   # UI
   cupertino_icons: ^1.0.2

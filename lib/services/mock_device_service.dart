@@ -30,37 +30,44 @@ class MockDeviceService {
   }
 
   void _simulateDeviceDiscovery() {
-    // Add some mock devices
-    final mockDevices = [
-      DeviceInfo(
-        deviceId: 'device_001',
-        deviceName: 'Samsung Galaxy S21',
-        endpointId: 'device_001',
-      ),
-      DeviceInfo(
-        deviceId: 'device_002', 
-        deviceName: 'iPhone 13 Pro',
-        endpointId: 'device_002',
-      ),
-      DeviceInfo(
-        deviceId: 'device_003',
-        deviceName: 'Pixel 6',
-        endpointId: 'device_003',
-      ),
-    ];
+    // Simulate gradual device discovery
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_devices.length < 3) {
+        final deviceNames = [
+          'Samsung Galaxy S21',
+          'iPhone 13 Pro', 
+          'Pixel 6',
+          'OnePlus 9 Pro',
+          'Xiaomi Mi 11',
+        ];
+        
+        final deviceId = 'device_${_devices.length + 1}';
+        final deviceName = deviceNames[_devices.length % deviceNames.length];
+        
+        final newDevice = DeviceInfo(
+          deviceId: deviceId,
+          deviceName: deviceName,
+          endpointId: deviceId,
+        );
+        
+        _devices.add(newDevice);
+        _devicesController.add(List.from(_devices));
+        
+        if (_devices.length >= 3) {
+          timer.cancel();
+        }
+      }
+    });
 
-    _devices.addAll(mockDevices);
-    _devicesController.add(List.from(_devices));
-
-    // Simulate periodic device updates
-    _discoveryTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    // Simulate periodic connection state changes
+    _discoveryTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
       if (_devices.isNotEmpty) {
         final random = Random();
         final deviceIndex = random.nextInt(_devices.length);
         final device = _devices[deviceIndex];
         
         // Simulate connection state changes
-        if (random.nextBool()) {
+        if (random.nextBool() && !device.isConnecting) {
           _devices[deviceIndex] = device.copyWith(
             isConnected: !device.isConnected,
             isConnecting: false,
